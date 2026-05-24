@@ -1,11 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { authService } from "../../firebase";
+import { dbService } from "../../firebase";
 
 const initialStateValue = {
-  nickName: "", //양홍련
+  uid: "",
+  nickName: "", //닉네임 양홍련
   email: "", //이메일
-  password: "",
   grade: "🌱소중한 자모",
   visitCount: 0,
   postNumber: 0,
@@ -18,21 +20,28 @@ export const loginUser = createAsyncThunk(
     try {
       const userCredential = await signInWithEmailAndPassword(
         authService,
-        email,
+        email.trim(),
         password
       );
       const user = userCredential.user;
+      const userDoc = await getDoc(doc(dbService, "User", user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : {};
+
       return {
-        nickName: user.displayName || "Unknown",
+        uid: user.uid,
+        nickName: userData.nickName || user.displayName || "Unknown",
         email: user.email,
-        password,
-        grade: "🌱소중한 자모",
-        visitCount: 0,
-        postNumber: 0,
-        commentNumber: 0,
+        grade: userData.grade || "🌱소중한 자모",
+        profileImg: userData.profileImg || "",
+        visitCount: userData.visitCount || 0,
+        postNumber: userData.postNumber || 0,
+        commentNumber: userData.commentNumber || 0,
       };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue({
+        code: error.code,
+        message: error.message,
+      });
     }
   }
 );
@@ -44,7 +53,10 @@ export const logoutUser = createAsyncThunk(
     try {
       await signOut(authService);
     } catch (error) {
-      await rejectWithValue(error.message);
+      return rejectWithValue({
+        code: error.code,
+        message: error.message,
+      });
     }
   }
 );
@@ -74,23 +86,29 @@ export const logoutUser = createAsyncThunk(
 // );
 export const userSlice = createSlice({
   name: "user",
-  initialState: { value: initialStateValue },
+  initialState: { value: initialStateValue, status: "idle", error: null },
   reducers: {
     login: (state, action) => {
       state.value = action.payload;
+      state.status = "succeeded";
+      state.error = null;
     },
     logout: (state) => {
       state.value = initialStateValue;
+      state.status = "idle";
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(loginUser.pending, (state) => {
         state.status = "loading";
+        state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.value = action.payload;
+        state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.status = "failed";

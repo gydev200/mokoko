@@ -1,22 +1,17 @@
-import { useState, useId } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../component/Logo";
 import "./SignUp.css";
-import mokoko from "../assets/Travel with MOKOKO.jpg";
-import debounce from "../utils/debounce";
 import {
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  sendEmailVerification,
   updateProfile,
 } from "firebase/auth";
 import { authService, dbService } from "../../firebase.js";
-import { collection, doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 const SignUp = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
-  console.log("SignUp 컴포넌트 렌더링 시작");
   // const [id, setId] = useState("");
   // const [password, setPassword] = useState("");
   const [formState, setformState] = useState({
@@ -27,15 +22,24 @@ const SignUp = () => {
   });
   const handleInput = (e) => {
     const { name, value } = e.target;
-    setformState({
-      ...formState,
+    setformState((prevState) => ({
+      ...prevState,
       [name]: value,
-    });
-    console.log(value);
+    }));
   };
   const handleRegister = async (e) => {
     e.preventDefault();
-    const { nickname, email, password, passwordConfirm } = formState;
+    const { nickname, password, passwordConfirm } = formState;
+    const email = formState.email.trim();
+
+    if (nickname.trim() === "") {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+    if (email === "") {
+      alert("이메일을 입력해주세요.");
+      return;
+    }
     if (password !== passwordConfirm) {
       alert("비밀번호가 일치하지 않습니다. 다시 입력해주세요.");
       return;
@@ -48,10 +52,10 @@ const SignUp = () => {
       );
       const user = userCredential.user;
 
-      await updateProfile(user, { displayName: nickname });
+      await updateProfile(user, { displayName: nickname.trim() });
 
       await setDoc(doc(dbService, "User", user.uid), {
-        nickName: nickname,
+        nickName: nickname.trim(),
         email: email,
         grade: "🌱소중한 자모",
         profileImg: "",
@@ -62,47 +66,37 @@ const SignUp = () => {
 
       alert("🌱 가입이 완료되었습니다. 자라나는 모코코에 오신 것을 환영합니다");
       navigate("/");
-      console.log(user.displayName);
     } catch (error) {
-      // createUserWithEmailAndPassword(auth, formState.email, formState.password)
-      //   .then(async (userCredential) => {
-      //     const user = userCredential.user;
-      //     await updateProfile(auth.user, { displayName: formState.nickname });
-      //     navigate("/");
-      //     alert(
-      //       "🌱 가입이 완료되었습니다. 자라나는 모코코에 오신 것을 환영합니다"
-      //     );
-      //   })
-      const errorMessage = error.message;
+      let nextErrorMsg = "회원가입에 실패했습니다. 다시 시도해주세요.";
       switch (error.code) {
         case "auth/weak-password":
-          setErrorMsg("비밀번호가 너무 짧습니다. 6자리 이상으로 설정해주세요.");
+          nextErrorMsg = "비밀번호가 너무 짧습니다. 6자리 이상으로 설정해주세요.";
           break;
         case "auth/invalid-email":
-          setErrorMsg("잘못된 이메일 주소입니다. 다시 입력해주세요.");
+          nextErrorMsg = "잘못된 이메일 주소입니다. 다시 입력해주세요.";
           break;
         case "auth/email-already-in-use":
-          setErrorMsg("이미 가입되어 있는 계정입니다");
+          nextErrorMsg = "이미 가입되어 있는 계정입니다";
           break;
       }
-      alert(errorMsg);
+      setErrorMsg(nextErrorMsg);
+      alert(nextErrorMsg);
     }
 
     //파이어베이스 인증작업
   };
-  const handleDebounceInput = debounce(handleInput, 500);
   return (
     <div className="signUp">
       <div className="formContainer">
         <Logo />
         <p></p>
-        <form action="s">
+        <form onSubmit={handleRegister}>
           <input
             className="signupForm"
-            type="signupForm"
+            type="text"
             name="nickname"
             placeholder="닉네임 (자모에서 사용하는 닉네임)"
-            onChange={handleDebounceInput}
+            onChange={handleInput}
           />
           <input
             className="signupForm"
@@ -110,7 +104,7 @@ const SignUp = () => {
             name="email"
             placeholder="이메일(비밀번호 재설정용)"
             autoComplete="username"
-            onChange={handleDebounceInput}
+            onChange={handleInput}
           />
           <input
             className="signupForm"
@@ -118,7 +112,7 @@ const SignUp = () => {
             name="password"
             placeholder="비밀번호"
             autoComplete="new-password"
-            onChange={handleDebounceInput}
+            onChange={handleInput}
           />
           <input
             className="signupForm"
@@ -126,9 +120,9 @@ const SignUp = () => {
             name="passwordConfirm"
             placeholder="비밀번호 확인"
             autoComplete="new-password"
-            onChange={handleDebounceInput}
+            onChange={handleInput}
           />
-          <button className="signupButton" onClick={handleRegister}>
+          <button className="signupButton" type="submit">
             가입하기
           </button>
         </form>

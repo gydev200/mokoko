@@ -20,7 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import LoginButton from "../component/LoginButton";
 import Profile from "../component/Profile";
 import Spinner from "../assets/spinner.gif";
-
+import Events from './../component/Events.jsx'
 const Main = () => {
   const [loading, setLoading] = useState(false);
   const [isAuthUser, setisAuthUser] = useState(false);
@@ -117,7 +117,9 @@ const Main = () => {
           모험섬 일정
           <DailyContent />
         </div>
-        <div className="item event">로아 현재이벤트</div>
+        <div className="item event">진행중인 이벤트
+          <Events />
+        </div>
         <div className="item board1">게시판(최근글)</div>
         <div className="item board2">게시판(인기글)</div>
         <div className="item gallery">갤러리~~</div>

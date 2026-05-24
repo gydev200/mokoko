@@ -1,20 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../redux/user"; //Redux Thunk
 import "./Login.css";
 import Logo from "./../component/Logo";
-import show from "../assets/show-password.svg";
-import hide from "../assets/hide-password.svg";
-import Loading from "../component/Loding";
 import Clicked from "../assets/check_on.svg";
 import unClicked from "../assets/check_off.svg";
-import debounce from "../utils/debounce";
 
 const Login = () => {
   const [userInputData, setUserInputData] = useState({ id: "", password: "" });
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
-  const [isPWHide, setisPWHide] = useState(true);
+  const [isPWHide] = useState(true);
   const [isAutoLoginClicked, setIsAutoLoginClicked] = useState(false);
 
   const dispatch = useDispatch();
@@ -22,47 +18,37 @@ const Login = () => {
   const passwordInputRef = useRef();
   const navigate = useNavigate();
 
-  const user = useSelector((state) => state.user.value);
-  const { status, error } = useSelector((state) => state.user);
-
   useEffect(() => {
     setIsButtonDisabled(
-      userInputData.id === "" || userInputData.password === ""
+      userInputData.id.trim() === "" || userInputData.password === ""
     );
   }, [userInputData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("id:", userInputData.id, "pw:", userInputData.password);
-    if (userInputData.id === "") {
-      alert("아이디를 입력해주세요");
+    const email = userInputData.id.trim();
+    const password = userInputData.password;
+
+    if (email === "") {
+      alert("이메일을 입력해주세요");
       idInputRef.current.focus();
-      // setIsButtonDisabled(true);
-      // console.log(idInputRef.current, userInputData);
       return;
-    } else if (userInputData.password === "") {
+    } else if (password === "") {
       alert("비밀번호를 입력해주세요");
       passwordInputRef.current.focus();
-      // setIsButtonDisabled(true);
       return;
     } else {
-      dispatch(
-        loginUser({ email: userInputData.id, password: userInputData.password })
-      )
-        // login({ email: userInputData.id, password: userInputData.password })
+      dispatch(loginUser({ email, password }))
         .unwrap()
         .then(() => {
-          // const user = authService.currentUser;
-          // const displayName = user.displayName;
-          console.log("로그인 성공!");
-          console.log(loginUser);
-
           navigate("/");
-          // alert(`${user.displayName}님 환영합니다`);
         })
         .catch((error) => {
           console.error("Login Error details", error);
           switch (error.code) {
+            case "auth/invalid-credential":
+              alert("이메일 또는 비밀번호가 일치하지 않습니다.");
+              break;
             case "auth/user-not-found":
               alert("가입되지 않은 사용자 입니다.");
               break;
@@ -85,14 +71,16 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUserInputData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-    console.log("입력된 값", userInputData);
-    setIsButtonDisabled(
-      userInputData.id === "" || userInputData.password === ""
-    );
+    setUserInputData((prevData) => {
+      const nextData = {
+        ...prevData,
+        [name]: value,
+      };
+      setIsButtonDisabled(
+        nextData.id.trim() === "" || nextData.password === ""
+      );
+      return nextData;
+    });
   };
 
   //자동로그인 버튼
@@ -124,17 +112,19 @@ const Login = () => {
                 type="text"
                 name="id"
                 onChange={handleChange}
-                placeholder="아이디를 입력하세요"
+                placeholder="이메일을 입력하세요"
+                inputMode="email"
+                autoComplete="username"
               />
               <input
                 ref={passwordInputRef}
                 className="inputForm showPassword hidePassword"
-                // type={isPWHide ? "hidePW" : "showPW"}
-                type={isPWHide ? "text" : "password"}
+                type={isPWHide ? "password" : "text"}
                 name="password"
                 onChange={handleChange}
                 value={userInputData.password}
                 placeholder="비밀번호를 입력하세요"
+                autoComplete="current-password"
               />
               {/* <button
                 type="button"
